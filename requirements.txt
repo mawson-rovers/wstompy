@@ -1,0 +1,7 @@
+decopatch==1.4.10
+iniconfig==2.1.0
+makefun==1.15.6
+packaging==24.2
+pluggy==1.5.0
+pytest==8.3.5
+pytest-kwparametrize==0.0.3

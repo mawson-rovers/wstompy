@@ -7,6 +7,7 @@ protocol = Stomp12
 _EXAMPLE_HOST = 'example.com'
 _EXAMPLE_PATH = '/example/path'
 _EXAMPLE_BODY = 'lorem'
+_EXAMPLE_BODY_WITH_HIGH_BYTES = b'\xea\xef'
 
 
 @pytest.mark.kwparametrize(
@@ -54,7 +55,7 @@ def test_connect(
             body=_EXAMPLE_BODY,
             transaction=None,
             custom_headers=None,
-            expected=f'SEND\ndestination:{_EXAMPLE_PATH}\ncontent-type:text/plain\n{_EXAMPLE_BODY}\n\x00\n',
+            expected=f'SEND\ndestination:{_EXAMPLE_PATH}\ncontent-type:text/plain\n\n{_EXAMPLE_BODY}\x00\n'.encode('utf-8'),
         ),
         dict(
             destination=_EXAMPLE_PATH,
@@ -62,8 +63,8 @@ def test_connect(
             transaction='transaction1',
             custom_headers=None,
             expected=(
-                f'SEND\ndestination:{_EXAMPLE_PATH}\ncontent-type:text/plain\n'
-                f'transaction:transaction1\n{_EXAMPLE_BODY}\n\x00\n'
+                f'SEND\ndestination:{_EXAMPLE_PATH}\ncontent-type:text/plain\n'.encode('utf-8') +
+                f'transaction:transaction1\n\n{_EXAMPLE_BODY}\x00\n'.encode('utf-8')
             ),
         ),
         dict(
@@ -72,8 +73,20 @@ def test_connect(
             transaction=None,
             custom_headers={'myheader1': 'myheadervalue1'},
             expected=(
-                f'SEND\ndestination:{_EXAMPLE_PATH}\ncontent-type:text/plain\n'
-                f'myheader1:myheadervalue1\n{_EXAMPLE_BODY}\n\x00\n'
+                f'SEND\ndestination:{_EXAMPLE_PATH}\ncontent-type:text/plain\n'.encode('utf-8') +
+                f'myheader1:myheadervalue1\n\n{_EXAMPLE_BODY}\x00\n'.encode('utf-8')
+            ),
+        ),
+        dict(
+            destination=_EXAMPLE_PATH,
+            body=_EXAMPLE_BODY_WITH_HIGH_BYTES,
+            transaction=None,
+            custom_headers={'myheader1': 'myheadervalue1'},
+            expected=(
+                f'SEND\ndestination:{_EXAMPLE_PATH}\ncontent-type:text/plain\n'.encode('utf-8') +
+                f'myheader1:myheadervalue1\n\n'.encode('utf-8') +
+                _EXAMPLE_BODY_WITH_HIGH_BYTES +
+                f'\x00\n'.encode('utf-8')
             ),
         ),
     ]
@@ -82,7 +95,7 @@ def test_send(destination, body, transaction, custom_headers, expected):
     assert (
         protocol.send(
             destination=destination,
-            body=body,
+            body=body.encode('utf-8') if isinstance(body, str) else body,
             transaction=transaction,
             custom_headers=custom_headers,
         )

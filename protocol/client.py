@@ -13,6 +13,8 @@ class Ack(str, enum.Enum):
 
 class StompClientProtocol(ABC):
     CONNECT_COMMAND = 'CONNECT'
+    NULL_BYTE = b'\x00'
+    NEW_LINE_BYTES = "\n".encode("utf-8")
 
     @classmethod
     @abstractmethod
@@ -133,7 +135,7 @@ class Stomp12(StompClientProtocol):
     def send(
         cls,
         destination: str,
-        body: str,
+        body: bytes,
         content_type: str = DEFAULT_CONTENT_TYPE,
         transaction: str = None,
         custom_headers: Optional[dict] = None,
@@ -143,7 +145,14 @@ class Stomp12(StompClientProtocol):
         )
         _content_type = f'content-type:{content_type}\n' if content_type else ''
         _transaction = f'transaction:{transaction}\n' if transaction else ''
-        return f'SEND\ndestination:{destination}\n{_content_type}{_transaction}{_custom_headers}{body}\n\x00\n'
+        header = f'SEND\ndestination:{destination}\n{_content_type}{_transaction}{_custom_headers}'
+        return b''.join([
+            header.encode("utf-8"),
+            StompClientProtocol.NEW_LINE_BYTES,
+            body,
+            StompClientProtocol.NULL_BYTE,
+            StompClientProtocol.NEW_LINE_BYTES
+        ])
 
     @classmethod
     def subscribe(cls, id: str, destination: str, ack: Optional[str] = Ack.AUTO):
